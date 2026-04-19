@@ -4,12 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aethermind - Dashboard</title>
-    <meta name="description" content="Aethermind learning dashboard overview">
-    <meta name="keywords" content="learning, dashboard, courses, education">
-    <meta property="og:title" content="Aethermind Dashboard">
-    <meta property="og:description" content="Your learning journey overview">
-    <meta name="twitter:title" content="Aethermind Dashboard">
-    <meta name="twitter:description" content="Your learning journey overview">
 
     <script src="https://resource.trickle.so/vendor_lib/unpkg/react@18/umd/react.production.min.js"></script>
     <script src="https://resource.trickle.so/vendor_lib/unpkg/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -31,15 +25,13 @@
             --stat-3-bg: #0f172a;
         }
     }
-
     @layer base {
         body {
             background-color: var(--bg-color);
             color: var(--text-main);
-            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family: ui-sans-serif, system-ui, sans-serif;
         }
     }
-
     @layer components {
         .nav-item {
             @apply flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors duration-200 cursor-pointer text-gray-600 hover:bg-gray-50;
@@ -52,7 +44,21 @@
 </head>
 <body>
     <div id="root"></div>
-    
+
+    <!-- ✅ STEP 1: Firebase Compat Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
+
+    <!-- ✅ STEP 2: Firebase Config + StorageDB -->
+    <script src="utils/firebase.js"></script>
+
+    <!-- ✅ STEP 3: Utils (pages se PEHLE) -->
+    <script type="text/babel" src="utils/storage.js"></script>
+    <script type="text/babel" src="utils/aiClient.js"></script>
+
+    <!-- ✅ STEP 4: Components -->
     <script type="text/babel" src="components/Sidebar.js"></script>
     <script type="text/babel" src="components/StatCard.js"></script>
     <script type="text/babel" src="components/CourseCard.js"></script>
@@ -64,6 +70,7 @@
     <script type="text/babel" src="components/RatingWidget.js"></script>
     <script type="text/babel" src="components/DashboardLayout.js"></script>
 
+    <!-- ✅ STEP 5: Pages -->
     <script type="text/babel" src="pages/Landing.js"></script>
     <script type="text/babel" src="pages/Login.js"></script>
     <script type="text/babel" src="pages/Dashboard.js"></script>
@@ -75,8 +82,7 @@
     <script type="text/babel" src="pages/CoursePlayer.js"></script>
     <script type="text/babel" src="pages/Settings.js"></script>
 
-    <script type="text/babel" src="utils/storage.js"></script>
-    <script type="text/babel" src="utils/aiClient.js"></script>
+    <!-- ✅ STEP 6: Main App (SABSE LAST) -->
     <script type="text/babel" src="app.js"></script>
 </body>
 </html>

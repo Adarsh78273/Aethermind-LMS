@@ -1,12 +1,6 @@
-// This file acts as the database layer.
-// It uses a hybrid approach:
-// 1. If running on Trickle, it uses the built-in Trickle Database for cross-device sync.
-// 2. If running locally or hosted elsewhere (e.g., Vercel, Netlify), it falls back to Local Storage.
-
 window.StorageDB = {
     // Helper to check if we are in the Trickle environment
     isTrickleEnv: () => {
-        // Temporarily disabled to use local storage exclusively
         return false;
     },
 
@@ -66,37 +60,59 @@ window.StorageDB = {
         }
     },
 
-    // --- Users Management ---
+    // --- Users Management (✅ FIREBASE) ---
     getUsers: async () => {
         try {
-            const local = JSON.parse(localStorage.getItem('local_aether_user') || '[]');
-            return Array.isArray(local) ? local : [];
+            const db = firebase.firestore();
+            const snap = await db.collection("users").get();
+            if (snap.empty) return [];
+            return snap.docs.map(doc => doc.data());
         } catch (e) {
-            console.error("Error reading local users:", e);
+            console.error("Error reading users from Firebase:", e);
             return [];
         }
     },
+
+    // ✅ FIREBASE — User save karna
     saveUser: async (user) => {
         try {
-            const users = JSON.parse(localStorage.getItem('local_aether_user') || '[]');
-            const existingIndex = users.findIndex(u => u.email === user.email);
-            if (existingIndex >= 0) {
-                users[existingIndex] = user;
+            const db = firebase.firestore();
+            const snap = await db.collection("users")
+                                 .where("email", "==", user.email)
+                                 .get();
+            if (!snap.empty) {
+                await snap.docs[0].ref.update(user);
+                console.log("✅ User updated in Firebase!");
             } else {
-                users.push(user);
+                await db.collection("users").add(user);
+                console.log("✅ User saved to Firebase!");
             }
-            localStorage.setItem('local_aether_user', JSON.stringify(users));
         } catch (e) {
-            console.error("Error saving user to local storage:", e);
+            console.error("❌ Error saving user to Firebase:", e);
             throw new Error("Failed to save user");
         }
     },
+
+    // ✅ FIREBASE — Email se user dhundhna
     getUserByEmail: async (email) => {
-        const users = await window.StorageDB.getUsers();
-        return users.find(u => u.email.toLowerCase() === email.toLowerCase()) || null;
+        try {
+            const db = firebase.firestore();
+            const snap = await db.collection("users")
+                                 .where("email", "==", email.toLowerCase())
+                                 .get();
+            if (snap.empty) {
+                console.log("ℹ️ No user found:", email);
+                return null;
+            }
+            console.log("✅ User found in Firebase!");
+            return snap.docs[0].data();
+        } catch (e) {
+            console.error("❌ Error finding user in Firebase:", e);
+            return null;
+        }
     },
 
-    // --- Courses Catalog ---
+    // --- Courses Catalog (localStorage) ---
     getAllCourses: async () => {
         try {
             const local = JSON.parse(localStorage.getItem('local_aether_course') || '[]');
@@ -121,7 +137,6 @@ window.StorageDB = {
             throw new Error("Failed to save course");
         }
     },
-
     deleteCourseById: async (courseId) => {
         try {
             const courses = JSON.parse(localStorage.getItem('local_aether_course') || '[]');
@@ -133,7 +148,7 @@ window.StorageDB = {
         }
     },
 
-    // --- User Data Helper ---
+    // --- User Data Helper (localStorage) ---
     _getUserData: async () => {
         try {
             const local = JSON.parse(localStorage.getItem('local_aether_user_data') || '[]');
@@ -171,7 +186,6 @@ window.StorageDB = {
     setMyCourses: async (email, courses) => {
         await window.StorageDB._saveUserDataField(email, 'myCourses', courses);
     },
-
     getStats: async (email) => {
         const data = await window.StorageDB._getUserDocData(email);
         return data ? (data.stats || []) : [];
@@ -179,7 +193,6 @@ window.StorageDB = {
     setStats: async (email, stats) => {
         await window.StorageDB._saveUserDataField(email, 'stats', stats);
     },
-
     getAITutorUsed: async (email) => {
         const data = await window.StorageDB._getUserDocData(email);
         return data ? !!data.aiTutorUsed : false;
@@ -187,7 +200,6 @@ window.StorageDB = {
     markAITutorUsed: async (email) => {
         await window.StorageDB._saveUserDataField(email, 'aiTutorUsed', true);
     },
-
     getChatHistory: async (email) => {
         const data = await window.StorageDB._getUserDocData(email);
         return data ? (data.chatHistory || []) : [];
@@ -201,14 +213,10 @@ window.StorageDB = {
         try {
             const users = await window.StorageDB.getUsers();
             const allUserData = await window.StorageDB._getUserData();
-            
             let count = 0;
             for (const user of users) {
                 if (user.role !== 'student') continue;
-                const userData = window.StorageDB.isTrickleEnv() 
-                    ? allUserData.find(i => i.objectData.email === user.email)?.objectData
-                    : allUserData.find(d => d.email === user.email);
-                
+                const userData = allUserData.find(d => d.email === user.email);
                 const myCourses = userData?.myCourses || [];
                 if (myCourses.some(c => String(c.id) === String(courseId))) {
                     count++;
@@ -227,23 +235,19 @@ window.StorageDB = {
             const allUserData = await window.StorageDB._getUserData();
             let totalRating = 0;
             let ratingCount = 0;
-            
             for (const userData of allUserData) {
-                const data = window.StorageDB.isTrickleEnv() ? userData.objectData : userData;
-                const ratings = data?.courseRatings || {};
+                const ratings = userData?.courseRatings || {};
                 if (ratings[courseId]) {
                     totalRating += ratings[courseId];
                     ratingCount++;
                 }
             }
-            
             return ratingCount > 0 ? (totalRating / ratingCount).toFixed(1) : '0.0';
         } catch (e) {
             console.error('Error getting course rating:', e);
             return '0.0';
         }
     },
-
     setUserCourseRating: async (email, courseId, rating) => {
         try {
             const userData = await window.StorageDB._getUserDocData(email);
@@ -254,7 +258,6 @@ window.StorageDB = {
             console.error('Error setting course rating:', e);
         }
     },
-
     getUserCourseRating: async (email, courseId) => {
         try {
             const userData = await window.StorageDB._getUserDocData(email);
